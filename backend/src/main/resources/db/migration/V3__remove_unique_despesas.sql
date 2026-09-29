@@ -1,0 +1,1 @@
+ALTER TABLE despesas DROP CONSTRAINT IF EXISTS despesas_deputado_id_cod_documento_key;
