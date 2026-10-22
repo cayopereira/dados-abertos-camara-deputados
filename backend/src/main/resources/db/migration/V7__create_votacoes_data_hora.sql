@@ -1,0 +1,1 @@
+CREATE INDEX idx_votacoes_data_hora ON votacoes(data_hora_registro DESC);
