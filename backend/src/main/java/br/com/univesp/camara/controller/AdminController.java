@@ -2,11 +2,15 @@
 
 package br.com.univesp.camara.controller;
 
+import br.com.univesp.camara.client.CamaraClient;
 import br.com.univesp.camara.etl.EtlService;
+import br.com.univesp.camara.model.Votacao;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.Year;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -15,9 +19,11 @@ import java.util.Map;
 public class AdminController {
 
     private final EtlService etlService;
+    private final CamaraClient camaraClient;
 
-    public AdminController(EtlService etlService) {
+    public AdminController(EtlService etlService, CamaraClient camaraClient) {
         this.etlService = etlService;
+        this.camaraClient = camaraClient;
     }
 
     @PostMapping("/etl/deputados")
@@ -47,4 +53,18 @@ public class AdminController {
         etlService.sincronizarDespesasAnoAtual();
         return ResponseEntity.ok(Map.of("status", "ok", "mensagem", "Despesas de todos os deputados sincronizadas."));
     }
+
+//    //teste local pra votacoes é pra apagar depois
+//    // http://localhost:8080/api/admin/teste/votacoes (pra ver se está funcionando)
+//    @GetMapping("/teste/votacoes")
+//    public List<Votacao> testarVotacoes() {
+//        return camaraClient.buscarVotacoes(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 31));
+//    }
+//
+//    //teste local pra votos é pra apagar depois
+//    // http://localhost:8080/api/admin/teste/votos/2442848-50 (pra ver se está funcionando)
+//    @GetMapping("/teste/votos/{votacaoId}")
+//    public List<CamaraClient.VotoApi> testarVotos(@PathVariable String votacaoId) {
+//        return camaraClient.buscarVotos(votacaoId);
+//    }
 }
