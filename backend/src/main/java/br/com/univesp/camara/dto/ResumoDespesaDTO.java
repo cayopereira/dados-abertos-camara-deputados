@@ -23,4 +23,36 @@ public class ResumoDespesaDTO {
             this.valor = valor;
         }
     }
+
+    public Integer getAno() {
+        return ano;
+    }
+
+    public void setAno(Integer ano) {
+        this.ano = ano;
+    }
+
+    public BigDecimal getTotal() {
+        return total;
+    }
+
+    public void setTotal(BigDecimal total) {
+        this.total = total;
+    }
+
+    public List<ItemResumo> getPorTipo() {
+        return porTipo;
+    }
+
+    public void setPorTipo(List<ItemResumo> porTipo) {
+        this.porTipo = porTipo;
+    }
+
+    public List<ItemResumo> getMensal() {
+        return mensal;
+    }
+
+    public void setMensal(List<ItemResumo> mensal) {
+        this.mensal = mensal;
+    }
 }

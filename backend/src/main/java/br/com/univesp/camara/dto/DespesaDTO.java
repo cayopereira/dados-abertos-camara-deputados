@@ -36,4 +36,92 @@ public class DespesaDTO {
         dto.setCnpjCpfFornecedor(d.getCnpjCpfFornecedor());
         return dto;
     }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Integer getAno() {
+        return ano;
+    }
+
+    public void setAno(Integer ano) {
+        this.ano = ano;
+    }
+
+    public Integer getMes() {
+        return mes;
+    }
+
+    public void setMes(Integer mes) {
+        this.mes = mes;
+    }
+
+    public String getTipoDespesa() {
+        return tipoDespesa;
+    }
+
+    public void setTipoDespesa(String tipoDespesa) {
+        this.tipoDespesa = tipoDespesa;
+    }
+
+    public String getCodDocumento() {
+        return codDocumento;
+    }
+
+    public void setCodDocumento(String codDocumento) {
+        this.codDocumento = codDocumento;
+    }
+
+    public LocalDate getDataDocumento() {
+        return dataDocumento;
+    }
+
+    public void setDataDocumento(LocalDate dataDocumento) {
+        this.dataDocumento = dataDocumento;
+    }
+
+    public BigDecimal getValorDocumento() {
+        return valorDocumento;
+    }
+
+    public void setValorDocumento(BigDecimal valorDocumento) {
+        this.valorDocumento = valorDocumento;
+    }
+
+    public BigDecimal getValorGlosa() {
+        return valorGlosa;
+    }
+
+    public void setValorGlosa(BigDecimal valorGlosa) {
+        this.valorGlosa = valorGlosa;
+    }
+
+    public BigDecimal getValorLiquido() {
+        return valorLiquido;
+    }
+
+    public void setValorLiquido(BigDecimal valorLiquido) {
+        this.valorLiquido = valorLiquido;
+    }
+
+    public String getNomeFornecedor() {
+        return nomeFornecedor;
+    }
+
+    public void setNomeFornecedor(String nomeFornecedor) {
+        this.nomeFornecedor = nomeFornecedor;
+    }
+
+    public String getCnpjCpfFornecedor() {
+        return cnpjCpfFornecedor;
+    }
+
+    public void setCnpjCpfFornecedor(String cnpjCpfFornecedor) {
+        this.cnpjCpfFornecedor = cnpjCpfFornecedor;
+    }
 }
