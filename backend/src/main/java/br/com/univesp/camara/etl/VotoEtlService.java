@@ -61,7 +61,7 @@ public class VotoEtlService {
                 votacao.setVotosCarregados(true);
                 votacaoRepo.save(votacao);
                 votosSalvos += votos.size();
-                Thread.sleep(300);
+                Thread.sleep(500);
             } catch (Exception e) {
                 System.err.println(" - Falha na votação " + votacao.getId() + ": " + e.getMessage());
             }

@@ -56,7 +56,7 @@ public class VotacaoEtlService {
                 votacaoRepo.saveAll(votacoes);
                 total += votacoes.size();
                 System.out.println(" - " + atual + " a " + fimJanela + ": " + votacoes.size() + " votações");
-                Thread.sleep(300);
+                Thread.sleep(500);
             } catch (Exception e) {
                 System.err.println(" - Falha na janela " + atual + " a " + fimJanela + ": " + e.getMessage());
                 break;

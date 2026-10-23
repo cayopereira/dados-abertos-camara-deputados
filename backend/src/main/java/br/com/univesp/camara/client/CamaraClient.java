@@ -192,7 +192,7 @@ public class CamaraClient {
                 resultado.add(conversor.apply(item));
             }
         } catch (Exception e) {
-            System.err.println("Erro ao buscar " + url + ": " + e.getMessage());
+            throw new IllegalStateException("Erro ao buscar " + url + ": " + e.getMessage(), e);
         }
         return resultado;
     }
