@@ -76,4 +76,10 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("status", "ok", "inicio", de.toString(), "fim", toString(), "mensagem", "Votações sincronizadas (incremental)."));
 
     }
+
+    @PostMapping("/etl/votos")
+    public ResponseEntity<Map<String, Object>> sincronizarVotos(@RequestParam(defaultValue = "5") int limite) {
+        votoEtlService.sincronizarVotos(limite);
+        return ResponseEntity.ok(Map.of("status", "ok", "limite", limite, "mensagem", "votos sincronizados"));
+    }
 }

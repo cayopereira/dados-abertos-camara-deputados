@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class VotacaoEtlService {
@@ -46,6 +48,11 @@ public class VotacaoEtlService {
 
             try {
                 List<Votacao> votacoes = client.buscarVotacoes(atual, fimJanela);
+                List<String> ids = votacoes.stream().map(Votacao::getId).toList();
+                Map<String, Boolean> jaCarregadas = votacaoRepo.findAllById(ids).stream()
+                        .collect(Collectors.toMap(Votacao::getId, Votacao::isVotosCarregados));
+                votacoes.forEach(v ->
+                        v.setVotosCarregados(jaCarregadas.getOrDefault(v.getId(), false)));
                 votacaoRepo.saveAll(votacoes);
                 total += votacoes.size();
                 System.out.println(" - " + atual + " a " + fimJanela + ": " + votacoes.size() + " votações");

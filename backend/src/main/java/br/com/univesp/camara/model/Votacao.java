@@ -150,4 +150,12 @@ public class Votacao {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    public boolean isVotosCarregados() {
+        return votosCarregados;
+    }
+
+    public void setVotosCarregados(boolean votosCarregados) {
+        this.votosCarregados = votosCarregados;
+    }
 }
