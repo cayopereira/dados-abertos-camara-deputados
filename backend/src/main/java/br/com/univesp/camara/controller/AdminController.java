@@ -4,7 +4,10 @@ package br.com.univesp.camara.controller;
 
 import br.com.univesp.camara.client.CamaraClient;
 import br.com.univesp.camara.etl.EtlService;
+import br.com.univesp.camara.etl.VotacaoEtlService;
+import br.com.univesp.camara.etl.VotoEtlService;
 import br.com.univesp.camara.model.Votacao;
+import br.com.univesp.camara.model.Voto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +23,14 @@ public class AdminController {
 
     private final EtlService etlService;
     private final CamaraClient camaraClient;
+    private final VotacaoEtlService votacaoEtlService;
+    private final VotoEtlService votoEtlService;
 
-    public AdminController(EtlService etlService, CamaraClient camaraClient) {
+    public AdminController(EtlService etlService, CamaraClient camaraClient, VotacaoEtlService votacaoEtlService, VotoEtlService votoEtlService) {
         this.etlService = etlService;
         this.camaraClient = camaraClient;
+        this.votacaoEtlService = votacaoEtlService;
+        this.votoEtlService = votoEtlService;
     }
 
     @PostMapping("/etl/deputados")
@@ -54,17 +61,19 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("status", "ok", "mensagem", "Despesas de todos os deputados sincronizadas."));
     }
 
-//    //teste local pra votacoes é pra apagar depois
-//    // http://localhost:8080/api/admin/teste/votacoes (pra ver se está funcionando)
-//    @GetMapping("/teste/votacoes")
-//    public List<Votacao> testarVotacoes() {
-//        return camaraClient.buscarVotacoes(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 31));
-//    }
-//
-//    //teste local pra votos é pra apagar depois
-//    // http://localhost:8080/api/admin/teste/votos/2442848-50 (pra ver se está funcionando)
-//    @GetMapping("/teste/votos/{votacaoId}")
-//    public List<CamaraClient.VotoApi> testarVotos(@PathVariable String votacaoId) {
-//        return camaraClient.buscarVotos(votacaoId);
-//    }
+    //curl.exe -X POST http://localhost:8080/api/admin/etl/votacoes pra carregar votacoes
+    @PostMapping("/etl/votacoes")
+    public ResponseEntity<Map<String, Object>> sincronizarVotacoes(@RequestParam(required = false) LocalDate inicio, LocalDate fim) {
+
+        LocalDate de = (inicio != null) ? inicio : votacaoEtlService.pontoDePartida();
+        LocalDate ate = (fim != null) ? fim : LocalDate.now();
+
+
+        if (de.isAfter(ate)) {
+            return ResponseEntity.badRequest().body(Map.of("status", "erro", "mensagem", "A data inicial não pode ser posterior à final."));
+        }
+        votacaoEtlService.sincronizarVotacoes(de, ate);
+        return ResponseEntity.ok(Map.of("status", "ok", "inicio", de.toString(), "fim", toString(), "mensagem", "Votações sincronizadas (incremental)."));
+
+    }
 }

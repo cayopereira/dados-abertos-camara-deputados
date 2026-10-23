@@ -44,6 +44,9 @@ public class Votacao {
     @Column(name = "proposicao_objeto", columnDefinition = "TEXT")
     private String proposicaoObjeto;
 
+    @Column(name = "votos_carregados", nullable = false)
+    private boolean votosCarregados;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
