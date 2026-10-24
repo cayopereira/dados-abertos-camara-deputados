@@ -82,4 +82,16 @@ public class AdminController {
         votoEtlService.sincronizarVotos(limite);
         return ResponseEntity.ok(Map.of("status", "ok", "limite", limite, "mensagem", "votos sincronizados"));
     }
+
+    @PostMapping("/etl/votos/{votacaoId}")
+    public ResponseEntity<Map<String, Object>> sincronizarVotacao(@PathVariable String votacaoId){
+        try {
+            var r = votoEtlService.sincronizarVotacao(votacaoId);
+            return ResponseEntity.ok(Map.of("status", "ok", "votacaoId", votacaoId, "votosSalvos", r.salvos(), "ignorados", r.ignorados()));
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.status(400).body(Map.of("status", "erro","mensagem", e.getMessage()));
+        }catch (Exception e){
+            return ResponseEntity.status(502).body(Map.of("status", "erro", "mensagem", String.valueOf(e.getMessage())));
+        }
+    }
 }

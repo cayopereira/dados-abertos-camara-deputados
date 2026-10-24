@@ -4,6 +4,7 @@ import br.com.univesp.camara.model.Voto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -27,4 +28,7 @@ public interface VotoRepository extends JpaRepository<Voto, Long> {
             "GROUP BY v.tipoVoto ORDER BY COUNT(v) DESC")
     List<Object[]> placarPorDeputado (@Param("deputadoId") Long deputadoId);
 
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM Voto v WHERE v.votacao.id = :votacaoId")
+    void deleteByVotacaoId(@Param("votacaoId") String votacaoId);
 }
