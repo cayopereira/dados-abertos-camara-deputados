@@ -17,7 +17,7 @@ public interface VotacaoRepository extends JpaRepository<Votacao, String> {
 
     Page<Votacao> findAllByOrderByDataHoraRegistroDesc(Pageable pageable);
 
-    List<Votacao> findByVotosCarregadosFalseOrderByDataAsc(Pageable pageable);
+    List<Votacao> findByVotosCarregadosFalseOrderByDataDesc(Pageable pageable);
 
     Optional<Votacao> findTopByOrderByDataHoraRegistroDesc();
 }

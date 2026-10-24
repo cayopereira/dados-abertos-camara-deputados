@@ -34,7 +34,7 @@ public class VotoEtlService {
         System.out.println(">>> ETL: sincronizando votos de até " + limite + " votações...");
         Set<Long> idsDeputados = deputadoRepo.findAll().stream().map(Deputado::getId).collect(Collectors.toSet());
 
-        List<Votacao> pendentes = votacaoRepo.findByVotosCarregadosFalseOrderByDataAsc(PageRequest.of(0, limite));
+        List<Votacao> pendentes = votacaoRepo.findByVotosCarregadosFalseOrderByDataDesc(PageRequest.of(0, limite));
 
         int votosSalvos = 0;
         int ignorados = 0;
