@@ -3,6 +3,7 @@ package br.com.univesp.camara.repository;
 import br.com.univesp.camara.model.Voto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,8 +13,10 @@ import java.util.List;
 
 public interface VotoRepository extends JpaRepository<Voto, Long> {
 
+    @EntityGraph(attributePaths = "deputado")
     Page<Voto> findByVotacaoId(String votacaoId, Pageable pageable);
 
+    @EntityGraph(attributePaths = "votacao")
     Page<Voto> findByDeputadoId(Long deputadoId, Pageable pageable);
 
     boolean existsByVotacaoId(String votacaoId);

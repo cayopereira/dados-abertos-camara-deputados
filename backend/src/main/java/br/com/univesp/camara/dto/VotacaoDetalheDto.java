@@ -1,7 +1,6 @@
 package br.com.univesp.camara.dto;
 
 import br.com.univesp.camara.model.Votacao;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDate;
