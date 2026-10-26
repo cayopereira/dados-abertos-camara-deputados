@@ -1,0 +1,2 @@
+ALTER TABLE votacoes
+    ADD COLUMN votos_carregados BOOLEAN NOT NULL DEFAULT FALSE;
