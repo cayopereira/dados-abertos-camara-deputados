@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -94,4 +95,14 @@ public class AdminController {
             return ResponseEntity.status(502).body(Map.of("status", "erro", "mensagem", String.valueOf(e.getMessage())));
         }
     }
+
+    @PostMapping("/etl/tudo")
+    public ResponseEntity<Map<String, Object>> sincronizarTudo() {
+        CompletableFuture.runAsync(etlService::sincronizarTudo);
+        return ResponseEntity.accepted().body(Map.of(
+                "status", "iniciado",
+                "mensagem", "Sincronização de deputados, votações, votos e despesas iniciada. Acompanhe pelo log."));
+    }
+
+
 }
