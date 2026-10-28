@@ -12,8 +12,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 @Service
 public class TemaEtlService {
@@ -50,7 +48,7 @@ public class TemaEtlService {
     public void sincronizarProposicoesTemas(){
         System.out.println(">>> ETL: sincronizando proposições por tema...");
 
-        Set<Long> relevantes = new HashSet<>(votacaoRepo.findByProposicaoIdsDistintos());
+        Set<Long> relevantes = new HashSet<>(votacaoRepo.findProposicaoIdsDistintos());
         if (relevantes.isEmpty()){
             System.err.println(">>> ETL: nenhuma votação com proposição.");
             return;

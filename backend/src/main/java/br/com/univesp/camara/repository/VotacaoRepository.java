@@ -24,5 +24,11 @@ public interface VotacaoRepository extends JpaRepository<Votacao, String> {
     Optional<Votacao> findTopByOrderByDataHoraRegistroDesc();
 
     @Query("SELECT DISTINCT v.proposicaoId FROM Votacao v WHERE v.proposicaoId IS NOT NULL")
-    List<Long> findByProposicaoIdsDistintos();
+    List<Long> findProposicaoIdsDistintos();
+
+    @Query(value = "SELECT v FROM Votacao v JOIN ProposicaoTema pt ON pt.proposicaoId = v.proposicaoId " +
+                    "WHERE pt.temaCod = :cod",
+            countQuery = "SELECT COUNT(v) FROM Votacao v JOIN ProposicaoTema pt ON pt.proposicaoId = v.proposicaoId "+
+                    "WHERE pt.temaCod = :cod")
+    Page<Votacao> findByTema(@Param("cod") Integer cod, Pageable pageable);
 }
