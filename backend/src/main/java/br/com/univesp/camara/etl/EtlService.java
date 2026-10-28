@@ -5,33 +5,63 @@ import br.com.univesp.camara.model.Deputado;
 import br.com.univesp.camara.model.Despesa;
 import br.com.univesp.camara.repository.DeputadoRepository;
 import br.com.univesp.camara.repository.DespesaRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Year;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class EtlService {
 
+    @Value("${camara.etl.votos-por-execucao:300}")
+    private int votosPorExecucao;
+
     private final CamaraClient client;
     private final DeputadoRepository deputadoRepo;
     private final DespesaRepository despesaRepo;
+    private final VotacaoEtlService votacaoEtlService;
+    private final VotoEtlService votoEtlService;
+    private final AtomicBoolean emExecucao = new AtomicBoolean();
 
     public EtlService(CamaraClient client,
                       DeputadoRepository deputadoRepo,
-                      DespesaRepository despesaRepo) {
+                      DespesaRepository despesaRepo, VotacaoEtlService votacaoEtlService, VotoEtlService votoEtlService) {
         this.client = client;
         this.deputadoRepo = deputadoRepo;
         this.despesaRepo = despesaRepo;
+        this.votacaoEtlService = votacaoEtlService;
+        this.votoEtlService = votoEtlService;
     }
 
     // Executa todos os dias às 3h da manhã
     @Scheduled(cron = "0 0 3 * * *")
     public void sincronizarTudo() {
-        sincronizarDeputados();
-        sincronizarDespesasAnoAtual();
+        if (!emExecucao.compareAndSet(false, true)){
+            System.out.println(">>> ETL: já existe uma sincronização em andamento, ignorando.");
+            return;
+        }
+        try {
+            executar("deputados", this::sincronizarDeputados);
+            executar("votações", votacaoEtlService::sincronizarVotacoes);
+            executar("votos", () -> votoEtlService.sincronizarVotos(votosPorExecucao));
+            executar("despesas", this::sincronizarDespesasAnoAtual);
+            System.out.println(">>> ETL: fim da sincronização diária");
+        }finally {
+            emExecucao.set(false);
+        }
+
+    }
+
+    private void executar(String nome, Runnable etapa) {
+        try {
+            etapa.run();
+        } catch (Exception e) {
+            System.err.println(">>> ETL: falha na etapa " + nome + ": " + e.getMessage());
+        }
     }
 
     @Transactional

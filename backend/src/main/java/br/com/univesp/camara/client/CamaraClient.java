@@ -1,8 +1,6 @@
 package br.com.univesp.camara.client;
 
-import br.com.univesp.camara.CamaraApplication;
-import br.com.univesp.camara.model.Deputado;
-import br.com.univesp.camara.model.Despesa;
+import br.com.univesp.camara.model.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -11,8 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import br.com.univesp.camara.model.Votacao;
-import br.com.univesp.camara.model.Voto;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -113,7 +109,12 @@ public class CamaraClient {
         votacao.setUri(d.path("uri").asText(null));
         votacao.setUriEvento(d.path("uriEvento").asText(null));
         votacao.setUriOrgao(d.path("uriOrgao").asText(null));
-        votacao.setUriProposicaoObjeto(d.path("uriProposicaoObjeto").asText(null));
+//        votacao.setUriProposicaoObjeto(d.path("uriProposicaoObjeto").asText(null));
+        String uriProp = textOrNull(d, "uriProposicaoObjeto");
+        votacao.setUriProposicaoObjeto(uriProp);
+        votacao.setProposicaoId(uriProp != null
+                ? Long.valueOf(uriProp.substring(uriProp.lastIndexOf('/') + 1))
+                : null);
         votacao.setProposicaoObjeto(d.path("proposicaoObjeto").asText(null));
 
         return votacao;
@@ -137,6 +138,26 @@ public class CamaraClient {
                 dataStrRegistro != null ? LocalDateTime.parse(dataStrRegistro) : null);
     }
 
+    public record TemaApi(int cod, String nome) {
+    }
+
+    public List<TemaApi> buscarTemas() {
+        String url = baseUrl + "/referencias/proposicoes/codTema";
+        return buscarSemPaginacao(url, this::paraTema);
+    }
+
+    private TemaApi paraTema(JsonNode d) {
+        return new TemaApi(
+                Integer.parseInt(d.path("cod").asText()),
+                textOrNull(d, "nome")
+        );
+    }
+
+    public List<Long> buscarProposicoesDoTema(int cod) {
+        String url = baseUrl + "/proposicoes?codTema=" + cod + "&itens=100" ;
+        return buscarSeguindoLinks(url, d -> d.path("id").asLong());
+    }
+
     //Buscador refatorado
     private <T> List<T> buscarPaginado(String urlBase, Function<JsonNode, T> conversor) {
         List<T> resultado = new ArrayList<>();
@@ -145,7 +166,7 @@ public class CamaraClient {
 
         while (temMais) {
             String separador = urlBase.contains("?") ? "&" : "?";
-            String url = urlBase + separador + "&pagina=" + pagina;
+            String url = urlBase + separador + "pagina=" + pagina;
             try {
                 String json = restTemplate.getForObject(url, String.class);
                 JsonNode root = mapper.readTree(json);
@@ -176,8 +197,7 @@ public class CamaraClient {
                 Thread.currentThread().interrupt();
                 temMais = false;
             } catch (Exception e) {
-                System.err.println("Erro na página " + pagina + " de " + urlBase + ": " + e.getMessage());
-                temMais = false;
+                throw new IllegalStateException("Erro na página " + pagina + " de " + urlBase + ": " + e.getMessage(), e);
             }
         }
         return resultado;
@@ -193,6 +213,34 @@ public class CamaraClient {
             }
         } catch (Exception e) {
             throw new IllegalStateException("Erro ao buscar " + url + ": " + e.getMessage(), e);
+        }
+        return resultado;
+    }
+
+    private <T> List<T> buscarSeguindoLinks(String urlInicial, Function<JsonNode, T> conversor){
+        List<T> resultado = new ArrayList<>();
+        String url = urlInicial;
+        int paginas = 0;
+
+        while (url != null && paginas < 1000){
+            try {
+                JsonNode root = mapper.readTree(restTemplate.getForObject(url, String.class));
+                for (JsonNode item : root.path("dados")){
+                    resultado.add(conversor.apply(item));
+                }
+                String proxima = null;
+                for (JsonNode link : root.path("links")){
+                    if ("next".equals(link.path("rel").asText())){
+                        proxima = link.path("href").asText(null);
+                        break;
+                    }
+                }
+                url = proxima;
+                paginas++;
+                Thread.sleep(300);
+            }catch (Exception e){
+                throw  new IllegalStateException("Erro ao buscar " + url + ": " + e.getMessage(), e);
+            }
         }
         return resultado;
     }
