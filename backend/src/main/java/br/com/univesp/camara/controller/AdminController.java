@@ -4,10 +4,10 @@ package br.com.univesp.camara.controller;
 
 import br.com.univesp.camara.client.CamaraClient;
 import br.com.univesp.camara.etl.EtlService;
+import br.com.univesp.camara.etl.TemaEtlService;
 import br.com.univesp.camara.etl.VotacaoEtlService;
 import br.com.univesp.camara.etl.VotoEtlService;
-import br.com.univesp.camara.model.Votacao;
-import br.com.univesp.camara.model.Voto;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,12 +26,14 @@ public class AdminController {
     private final CamaraClient camaraClient;
     private final VotacaoEtlService votacaoEtlService;
     private final VotoEtlService votoEtlService;
+    private final TemaEtlService temaEtlService;
 
-    public AdminController(EtlService etlService, CamaraClient camaraClient, VotacaoEtlService votacaoEtlService, VotoEtlService votoEtlService) {
+    public AdminController(EtlService etlService, CamaraClient camaraClient, VotacaoEtlService votacaoEtlService, VotoEtlService votoEtlService, TemaEtlService temaEtlService) {
         this.etlService = etlService;
         this.camaraClient = camaraClient;
         this.votacaoEtlService = votacaoEtlService;
         this.votoEtlService = votoEtlService;
+        this.temaEtlService = temaEtlService;
     }
 
     @PostMapping("/etl/deputados")
@@ -64,8 +66,8 @@ public class AdminController {
 
     //curl.exe -X POST http://localhost:8080/api/admin/etl/votacoes pra carregar votacoes
     @PostMapping("/etl/votacoes")
-    public ResponseEntity<Map<String, Object>> sincronizarVotacoes(@RequestParam(required = false) LocalDate inicio, LocalDate fim) {
-
+    public ResponseEntity<Map<String, Object>> sincronizarVotacoes(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+                                                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim) {
         LocalDate de = (inicio != null) ? inicio : votacaoEtlService.pontoDePartida();
         LocalDate ate = (fim != null) ? fim : LocalDate.now();
 
@@ -74,7 +76,7 @@ public class AdminController {
             return ResponseEntity.badRequest().body(Map.of("status", "erro", "mensagem", "A data inicial não pode ser posterior à final."));
         }
         votacaoEtlService.sincronizarVotacoes(de, ate);
-        return ResponseEntity.ok(Map.of("status", "ok", "inicio", de.toString(), "fim", toString(), "mensagem", "Votações sincronizadas (incremental)."));
+        return ResponseEntity.ok(Map.of("status", "ok", "inicio", de.toString(), "fim", ate.toString(), "mensagem", "Votações sincronizadas."));
 
     }
 
@@ -85,15 +87,24 @@ public class AdminController {
     }
 
     @PostMapping("/etl/votos/{votacaoId}")
-    public ResponseEntity<Map<String, Object>> sincronizarVotacao(@PathVariable String votacaoId){
+    public ResponseEntity<Map<String, Object>> sincronizarVotacao(@PathVariable String votacaoId) {
         try {
             var r = votoEtlService.sincronizarVotacao(votacaoId);
             return ResponseEntity.ok(Map.of("status", "ok", "votacaoId", votacaoId, "votosSalvos", r.salvos(), "ignorados", r.ignorados()));
-        }catch (IllegalArgumentException e){
-            return ResponseEntity.status(400).body(Map.of("status", "erro","mensagem", e.getMessage()));
-        }catch (Exception e){
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body(Map.of("status", "erro", "mensagem", e.getMessage()));
+        } catch (Exception e) {
             return ResponseEntity.status(502).body(Map.of("status", "erro", "mensagem", String.valueOf(e.getMessage())));
         }
+    }
+
+    @PostMapping("/etl/temas")
+    public ResponseEntity<Map<String, Object>> sincronizarTemas(){
+        CompletableFuture.runAsync(temaEtlService::sincronizarTemas);
+        CompletableFuture.runAsync(temaEtlService::sincronizarProposicoesTemas);
+        return ResponseEntity.accepted().body(Map.of(
+                "status", "iniciado", "mensagem", "Sincronização de temas e proposicoes temas iniciada."));
+
     }
 
     @PostMapping("/etl/tudo")
@@ -103,6 +114,4 @@ public class AdminController {
                 "status", "iniciado",
                 "mensagem", "Sincronização de deputados, votações, votos e despesas iniciada. Acompanhe pelo log."));
     }
-
-
 }

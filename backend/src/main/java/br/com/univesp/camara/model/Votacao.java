@@ -47,6 +47,9 @@ public class Votacao {
     @Column(name = "votos_carregados", nullable = false)
     private boolean votosCarregados;
 
+    @Column(name = "proposicao_id")
+    private Long proposicaoId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
