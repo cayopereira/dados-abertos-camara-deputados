@@ -1,6 +1,12 @@
 package br.com.univesp.camara.client;
 
 import br.com.univesp.camara.model.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory; // <-- IMPORT NOVO
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -9,16 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
-
 @Component
 public class CamaraClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Value("${camara.api.base-url}")
@@ -26,6 +26,13 @@ public class CamaraClient {
 
     @Value("${camara.api.legislatura-atual}")
     private Integer legislaturaAtual;
+
+    public CamaraClient() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000); // 10 segundos (em milissegundos) para conectar
+        factory.setReadTimeout(60000);    // 60 segundos (em milissegundos) para esperar a resposta
+        this.restTemplate = new RestTemplate(factory);
+    }
 
     public List<Deputado> buscarDeputados() {
         String url = baseUrl + "/deputados?idLegislatura=" + legislaturaAtual + "&itens=100&ordem=ASC&ordenarPor=nome";
@@ -35,7 +42,6 @@ public class CamaraClient {
     private Deputado paraDeputado(JsonNode d) {
         Deputado dep = new Deputado();
         dep.setId(d.get("id").asLong());
-
         dep.setNome(d.get("nome").asText());
         dep.setNomeEleitoral(d.path("nomeEleitoral").asText(null));
         dep.setSiglaPartido(d.path("siglaPartido").asText(null));
@@ -43,7 +49,6 @@ public class CamaraClient {
         dep.setUrlFoto(d.path("urlFoto").asText(null));
         dep.setEmail(d.path("email").asText(null));
         dep.setLegislatura(legislaturaAtual);
-
         return dep;
     }
 
@@ -57,25 +62,17 @@ public class CamaraClient {
 
     private Despesa paraDespesa(JsonNode d) {
         Despesa despesa = new Despesa();
-
         despesa.setAno(d.path("ano").asInt());
         despesa.setMes(d.path("mes").asInt());
         despesa.setTipoDespesa(textOrNull(d, "tipoDespesa"));
         despesa.setCodDocumento(textOrNull(d, "codDocumento"));
-
-        // dataDocumento: pode vir como "2026-02-20T00:00:00" ou null
         String dataStr = textOrNull(d, "dataDocumento");
-        despesa.setDataDocumento(
-                dataStr != null ? LocalDate.parse(dataStr.substring(0, 10)) : null
-        );
-
+        despesa.setDataDocumento(dataStr != null ? LocalDate.parse(dataStr.substring(0, 10)) : null);
         despesa.setValorDocumento(decimalOrNull(d, "valorDocumento"));
         despesa.setValorGlosa(decimalOrNull(d, "valorGlosa"));
         despesa.setValorLiquido(decimalOrNull(d, "valorLiquido"));
-
         despesa.setNomeFornecedor(textOrNull(d, "nomeFornecedor"));
         despesa.setCnpjCpfFornecedor(textOrNull(d, "cnpjCpfFornecedor"));
-
         return despesa;
     }
 
@@ -87,19 +84,11 @@ public class CamaraClient {
 
     private Votacao paraVotacao(JsonNode d) {
         Votacao votacao = new Votacao();
-
         votacao.setId(d.get("id").asText());
-
         String dataStr = textOrNull(d, "data");
-        votacao.setData(
-                dataStr != null ? LocalDate.parse(dataStr.substring(0, 10)) : null
-        );
-
+        votacao.setData(dataStr != null ? LocalDate.parse(dataStr.substring(0, 10)) : null);
         String dataStrHora = textOrNull(d, "dataHoraRegistro");
-        votacao.setDataHoraRegistro(
-                dataStrHora != null ? LocalDateTime.parse(dataStrHora) : null
-        );
-
+        votacao.setDataHoraRegistro(dataStrHora != null ? LocalDateTime.parse(dataStrHora) : null);
         votacao.setDescricao(textOrNull(d, "descricao"));
 
         JsonNode aprov = d.path("aprovacao");
@@ -109,14 +98,11 @@ public class CamaraClient {
         votacao.setUri(d.path("uri").asText(null));
         votacao.setUriEvento(d.path("uriEvento").asText(null));
         votacao.setUriOrgao(d.path("uriOrgao").asText(null));
-//        votacao.setUriProposicaoObjeto(d.path("uriProposicaoObjeto").asText(null));
+
         String uriProp = textOrNull(d, "uriProposicaoObjeto");
         votacao.setUriProposicaoObjeto(uriProp);
-        votacao.setProposicaoId(uriProp != null
-                ? Long.valueOf(uriProp.substring(uriProp.lastIndexOf('/') + 1))
-                : null);
+        votacao.setProposicaoId(uriProp != null ? Long.valueOf(uriProp.substring(uriProp.lastIndexOf('/') + 1)) : null);
         votacao.setProposicaoObjeto(d.path("proposicaoObjeto").asText(null));
-
         return votacao;
     }
 
@@ -158,7 +144,10 @@ public class CamaraClient {
         return buscarSeguindoLinks(url, d -> d.path("id").asLong());
     }
 
-    //Buscador refatorado
+    // =========================================================================
+    // MÉTODOS DE BUSCA COM RETRY E PAGINAÇÃO
+    // =========================================================================
+
     private <T> List<T> buscarPaginado(String urlBase, Function<JsonNode, T> conversor) {
         List<T> resultado = new ArrayList<>();
         int pagina = 1;
@@ -168,7 +157,7 @@ public class CamaraClient {
             String separador = urlBase.contains("?") ? "&" : "?";
             String url = urlBase + separador + "pagina=" + pagina;
             try {
-                String json = restTemplate.getForObject(url, String.class);
+                String json = fazerRequisicaoComRetry(url);
                 JsonNode root = mapper.readTree(json);
                 JsonNode dados = root.get("dados");
 
@@ -191,7 +180,7 @@ public class CamaraClient {
                     }
                 }
                 pagina++;
-                Thread.sleep(300);
+                Thread.sleep(300); // Pausa para não sobrecarregar a API da Câmara
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -206,7 +195,7 @@ public class CamaraClient {
     private <T> List<T> buscarSemPaginacao(String url, Function<JsonNode, T> conversor) {
         List<T> resultado = new ArrayList<>();
         try {
-            String json = restTemplate.getForObject(url, String.class);
+            String json = fazerRequisicaoComRetry(url);
             JsonNode dados = mapper.readTree(json).path("dados");
             for (JsonNode item : dados) {
                 resultado.add(conversor.apply(item));
@@ -224,7 +213,8 @@ public class CamaraClient {
 
         while (url != null && paginas < 1000){
             try {
-                JsonNode root = mapper.readTree(restTemplate.getForObject(url, String.class));
+                String json = fazerRequisicaoComRetry(url);
+                JsonNode root = mapper.readTree(json);
                 for (JsonNode item : root.path("dados")){
                     resultado.add(conversor.apply(item));
                 }
@@ -238,15 +228,47 @@ public class CamaraClient {
                 url = proxima;
                 paginas++;
                 Thread.sleep(300);
-            }catch (Exception e){
-                throw  new IllegalStateException("Erro ao buscar " + url + ": " + e.getMessage(), e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e){
+                throw new IllegalStateException("Erro ao buscar " + url + ": " + e.getMessage(), e);
             }
         }
         return resultado;
     }
 
-// Helpers para leitura segura de campos JSON
+    // =========================================================================
+    // MÉTODO AUXILIAR DE RETRY
+    // =========================================================================
 
+    private String fazerRequisicaoComRetry(String url) {
+        int maxTentativas = 3;
+        long tempoEsperaMs = 3000; // 3 segundos
+
+        for (int tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+            try {
+                return restTemplate.getForObject(url, String.class);
+            } catch (Exception e) {
+                System.err.println(">>> Aviso: Falha na tentativa " + tentativa + " de " + maxTentativas + " para URL: " + url);
+                System.err.println(">>> Motivo: " + e.getMessage());
+
+                if (tentativa == maxTentativas) {
+                    throw new IllegalStateException("Falha após " + maxTentativas + " tentativas. Última URL: " + url, e);
+                }
+
+                try {
+                    Thread.sleep(tempoEsperaMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("Execução interrompida durante a espera entre tentativas.", ie);
+                }
+            }
+        }
+        return null;
+    }
+
+    // Helpers para leitura segura de campos JSON
     private String textOrNull(JsonNode node, String field) {
         JsonNode value = node.get(field);
         if (value == null || value.isNull()) return null;
@@ -263,5 +285,4 @@ public class CamaraClient {
             return null;
         }
     }
-
 }
