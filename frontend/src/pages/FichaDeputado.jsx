@@ -2,15 +2,24 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
-    LineChart, Line
+    LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts'
-import { obterDeputado, resumoDespesas } from '../services/api'
+import { obterDeputado, resumoDespesas, resumoVotosDeputado, listarVotosDeputado } from '../services/api'
+
+const COLORS = ['#16a34a', '#dc2626', '#ca8a04', '#64748b'] // Verde (Sim), Vermelho (Não), Amarelo (Abstenção), Cinza (Outros)
 
 export default function FichaDeputado() {
     const { id } = useParams()
     const [deputado, setDeputado] = useState(null)
-    const [resumo, setResumo] = useState(null)
+
+    // Estados de Despesas
+    const [resumoDesp, setResumoDesp] = useState(null)
     const [ano, setAno] = useState(new Date().getFullYear())
+
+    // Estados de Votações
+    const [resumoVotos, setResumoVotos] = useState(null)
+    const [ultimosVotos, setUltimosVotos] = useState([])
+
     const [erro, setErro] = useState(null)
 
     useEffect(() => {
@@ -20,27 +29,31 @@ export default function FichaDeputado() {
     }, [id])
 
     useEffect(() => {
-        resumoDespesas(id, ano)
-            .then(setResumo)
-            .catch(() => {})
+        resumoDespesas(id, ano).then(setResumoDesp).catch(() => {})
     }, [id, ano])
+
+    useEffect(() => {
+        resumoVotosDeputado(id).then(setResumoVotos).catch(() => {})
+        listarVotosDeputado(id, { size: 10 }).then(data => setUltimosVotos(data.content || [])).catch(() => {})
+    }, [id])
 
     if (erro) return <p role="alert" style={{ padding: '2rem', color: 'red' }}>{erro}</p>
     if (!deputado) return <p aria-live="polite" style={{ padding: '2rem' }}>Carregando...</p>
 
+    // Prepara dados para o gráfico de pizza de votos
+    const dadosPizza = resumoVotos?.porTipo?.map(item => ({
+        name: item.tipoVoto,
+        value: item.total
+    })) || []
+
     return (
-        <main style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+        <main style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
             <Link to="/">← Voltar</Link>
             <h1>{deputado.nome}</h1>
 
-            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', marginBottom: '2rem' }}>
                 {deputado.urlFoto && (
-                    <img
-                        src={deputado.urlFoto}
-                        alt={`Foto de ${deputado.nome}`}
-                        width={160}
-                        style={{ borderRadius: '4px' }}
-                    />
+                    <img src={deputado.urlFoto} alt={`Foto de ${deputado.nome}`} width={160} style={{ borderRadius: '4px' }} />
                 )}
                 <dl>
                     <dt><strong>Partido</strong></dt><dd>{deputado.siglaPartido}</dd>
@@ -49,60 +62,75 @@ export default function FichaDeputado() {
                 </dl>
             </div>
 
-            <section aria-labelledby="titulo-despesas" style={{ marginTop: '2rem' }}>
+            {/* SEÇÃO DE DESPESAS */}
+            <section aria-labelledby="titulo-despesas" style={{ marginBottom: '3rem', borderTop: '1px solid #ccc', paddingTop: '2rem' }}>
                 <h2 id="titulo-despesas">Despesas da Cota Parlamentar</h2>
-
                 <label htmlFor="ano-select">Ano: </label>
-                <select
-                    id="ano-select"
-                    value={ano}
-                    onChange={e => setAno(Number(e.target.value))}
-                    style={{ padding: '0.25rem', marginLeft: '0.5rem' }}
-                >
-                    {[2023, 2024, 2025, 2026].map(a => (
-                        <option key={a} value={a}>{a}</option>
-                    ))}
+                <select id="ano-select" value={ano} onChange={e => setAno(Number(e.target.value))} style={{ padding: '0.25rem', marginLeft: '0.5rem', marginBottom: '1rem' }}>
+                    {[2023, 2024, 2025, 2026].map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
 
-                {resumo?.porTipo?.length > 0 && (
-                    <>
-                        <h3>Por tipo de despesa</h3>
-                        <ResponsiveContainer width="100%" height={400}>
-                            <BarChart
-                                data={resumo.porTipo.map(item => ({ tipo: item.chave, valor: Number(item.valor) }))}
-                                layout="vertical"
-                                margin={{ left: 180, right: 30 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" />
-                                <YAxis dataKey="tipo" type="category" width={170} tick={{ fontSize: 12 }} />
-                                <Tooltip formatter={(v) => `R$ ${Number(v).toFixed(2)}`} />
-                                <Bar dataKey="valor" fill="#2563eb" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </>
+                {resumoDesp?.porTipo?.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={resumoDesp.porTipo.map(item => ({ tipo: item.chave, valor: Number(item.valor) }))} layout="vertical" margin={{ left: 180, right: 30 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" />
+                            <YAxis dataKey="tipo" type="category" width={170} tick={{ fontSize: 12 }} />
+                            <Tooltip formatter={(v) => `R$ ${Number(v).toFixed(2)}`} />
+                            <Bar dataKey="valor" fill="#2563eb" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : <p>Sem despesas registradas para este ano.</p>}
+            </section>
+
+            {/* SEÇÃO DE VOTAÇÕES */}
+            <section aria-labelledby="titulo-votacoes" style={{ borderTop: '1px solid #ccc', paddingTop: '2rem' }}>
+                <h2 id="titulo-votacoes">Atuação em Votações</h2>
+
+                {dadosPizza.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', marginBottom: '2rem' }}>
+                        <div style={{ flex: 1, minWidth: '300px' }}>
+                            <h3>Resumo Geral</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                                <PieChart>
+                                    <Pie data={dadosPizza} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                        {dadosPizza.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
                 )}
 
-                {resumo?.mensal?.length > 0 && (
-                    <>
-                        <h3>Evolução mensal</h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart
-                                data={resumo.mensal.map(item => ({ mes: item.chave, valor: Number(item.valor) }))}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="mes" />
-                                <YAxis />
-                                <Tooltip formatter={(v) => `R$ ${Number(v).toFixed(2)}`} />
-                                <Line type="monotone" dataKey="valor" stroke="#16a34a" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </>
-                )}
-
-                {resumo && resumo.porTipo?.length === 0 && (
-                    <p>Sem despesas registradas para este ano.</p>
-                )}
+                <h3>Últimos Votos Registrados</h3>
+                {ultimosVotos.length > 0 ? (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                            <thead>
+                            <tr style={{ borderBottom: '2px solid #ccc' }}>
+                                <th style={{ padding: '8px' }}>Data</th>
+                                <th style={{ padding: '8px' }}>Descrição</th>
+                                <th style={{ padding: '8px' }}>Voto</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {ultimosVotos.map(v => (
+                                <tr key={v.votacaoId} style={{ borderBottom: '1px solid #eee' }}>
+                                    <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>{v.dataVotacao}</td>
+                                    <td style={{ padding: '8px' }}>{v.descricao}</td>
+                                    <td style={{ padding: '8px', fontWeight: 'bold', color: v.tipoVoto === 'Sim' ? '#16a34a' : v.tipoVoto === 'Não' ? '#dc2626' : '#ca8a04' }}>
+                                        {v.tipoVoto}
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : <p>Nenhuma votação registrada para este deputado.</p>}
             </section>
         </main>
     )

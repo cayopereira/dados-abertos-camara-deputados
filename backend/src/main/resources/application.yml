@@ -3,9 +3,9 @@ spring:
     name: camara-api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/camara
-    username: camara
-    password: camara123
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/camara}
+    username: ${DATABASE_USER:camara}
+    password: ${DATABASE_PASSWORD:camara123}
     driver-class-name: org.postgresql.Driver
 
   jpa:

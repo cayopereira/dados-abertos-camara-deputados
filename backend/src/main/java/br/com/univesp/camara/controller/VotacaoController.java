@@ -17,7 +17,7 @@ import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/votacoes")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class VotacaoController {
 
     private final VotacaoRepository votacaoRepo;

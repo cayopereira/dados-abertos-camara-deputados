@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/deputados/{deputadoId}/despesas")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class DespesaController {
 
     private final DespesaRepository despesaRepo;

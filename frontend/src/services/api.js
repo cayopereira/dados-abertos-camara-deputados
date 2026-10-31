@@ -15,3 +15,9 @@ export const listarDespesas = (id, params) =>
 
 export const resumoDespesas = (id, ano) =>
     api.get(`/deputados/${id}/despesas/resumo`, { params: { ano } }).then(r => r.data)
+
+export const resumoVotosDeputado = (id) =>
+    api.get(`/deputados/${id}/votos/resumo`).then(r => r.data)
+
+export const listarVotosDeputado = (id, params) =>
+    api.get(`/deputados/${id}/votos`, { params }).then(r => r.data)
