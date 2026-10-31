@@ -21,8 +21,13 @@ public class CamaraApplication {
 		return args -> {
 			if (repo.count() == 0) {
 				System.out.println(">>> Banco vazio. Iniciando ETL de deputados...");
-				etl.sincronizarDeputados();
-				System.out.println(">>> ETL concluído: " + repo.count() + " deputados no banco.");
+				try {
+					etl.sincronizarDeputados();
+					System.out.println(">>> ETL concluído: " + repo.count() + " deputados no banco.");
+				} catch (Exception e) {
+					// Captura o erro e evita que a aplicação inteira caia
+					System.err.println(">>> ATENÇÃO: Falha no ETL inicial (a API continuará rodando). Erro: " + e.getMessage());
+				}
 			} else {
 				System.out.println(">>> Banco já possui " + repo.count() + " deputados.");
 			}
